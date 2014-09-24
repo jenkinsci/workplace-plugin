@@ -1,4 +1,4 @@
-workplace-jenkins-plugin
+Jenkins Workplace Plugin
 ========================
 
-Jenkins Plugin for workpalce notification messages.
+Jenkins Plugin for sending build related messages to workplace.
