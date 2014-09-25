@@ -62,7 +62,7 @@ public enum Phase {
 				listener.getLogger().println(String.format("Notifying webhook '%s'", target));
 				try {
 					JobState jobState = buildJobState(build.getParent(), build, listener);
-					HttpWorker worker = new HttpWorker(target.getUrl(), gson.toJson(jobState), target.getTimeout(),
+					HttpWorker worker = new HttpWorker(target.getUrl(), gson.toJson(jobState), target.getTimeout(), 3,
 							listener.getLogger());
 					executorService.submit(worker);
 				} catch (Throwable error) {

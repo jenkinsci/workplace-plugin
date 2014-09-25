@@ -16,6 +16,7 @@ package jenkins.plugins.elanceodesk.workplace.notifier;
 import hudson.ProxyConfiguration;
 
 import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 
 import jenkins.model.Jenkins;
 
@@ -29,7 +30,7 @@ import org.apache.commons.httpclient.methods.StringRequestEntity;
 
 /**
  * 
- * Makes http requests in a separate thread.
+ * Makes http post requests in a separate thread.
  *
  */
 public class HttpWorker implements Runnable {
@@ -41,36 +42,52 @@ public class HttpWorker implements Runnable {
 	private String data;
 
 	private int timeout;
+	
+	private int retries;
 
-	public HttpWorker(String url, String data, int timeout, PrintStream logger) {
+	public HttpWorker(String url, String data, int timeout, int retries, PrintStream logger) {
 		this.url = url;
 		this.data = data;
 		this.timeout = timeout;
 		this.logger = logger;
+		this.retries = retries;
 	}
 
 	public void run() {
-		RequestEntity requestEntity;
-		try {
-			logger.println(String.format("Posting data to webhook - %s", url));
-			requestEntity = new StringRequestEntity(data,"application/json", "UTF-8");
-			HttpClient client = getHttpClient();
-			client.getParams().setConnectionManagerTimeout(timeout);
-	        PostMethod post = new PostMethod(url);
-	        post.setRequestEntity(requestEntity);
-	        int responseCode = client.executeMethod(post);
-	        if(responseCode != HttpStatus.SC_OK) {
-	        	String response = post.getResponseBodyAsString();
-	        	logger.println(String.format("Posting data to - %s may have failed. Webhook responded with status code - %s", url, responseCode));
-	        	logger.println(String.format("Message from webhook - %s", response));
-	        	
-	        } else {
-	        	logger.println(String.format("Posting data to webhook - %s completed ", url));
-	        }
-		} catch (Exception e) {
-			logger.println(String.format("Failed to post data to webhook - %s", url));
-			e.printStackTrace(logger);
-		}
+		int tried = 0;
+		boolean success = false;
+		HttpClient client= getHttpClient();
+		client.getParams().setConnectionManagerTimeout(timeout);
+		do {
+			tried++;
+			RequestEntity requestEntity;
+			try {
+				requestEntity = new StringRequestEntity(data, "application/json", "UTF-8");
+			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace(logger);
+				break;
+			}
+			logger.println(String.format("Posting data to webhook - %s. Already Tried %s times", url, tried));
+			PostMethod post = new PostMethod(url);
+			try {
+		        post.setRequestEntity(requestEntity);
+		        int responseCode = client.executeMethod(post);
+		        if(responseCode != HttpStatus.SC_OK) {
+		        	String response = post.getResponseBodyAsString();
+		        	logger.println(String.format("Posting data to - %s may have failed. Webhook responded with status code - %s", url, responseCode));
+		        	logger.println(String.format("Message from webhook - %s", response));
+		        	
+		        } else {
+		        	success = true;
+		        	logger.println(String.format("Posting data to webhook - %s completed ", url));
+		        }
+			} catch (Exception e) {
+				logger.println(String.format("Failed to post data to webhook - %s", url));
+				e.printStackTrace(logger);
+			} finally {
+				 post.releaseConnection();
+			}
+		} while(tried < retries && !success);
 		
 	}
 
