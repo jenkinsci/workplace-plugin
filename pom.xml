@@ -73,9 +73,9 @@
     </developers>
 
     <scm>
-        <connection>scm:git:git@github.com:elance/workplace-jenkins-plugin.git</connection>
-        <developerConnection>scm:git:git@github.com:elance/workplace-jenkins-plugin.git</developerConnection>
-        <url>https://github.com/elance/workplace-jenkins-plugin</url>
+        <connection>scm:git:git@github.com:jenkinsci/workplace-plugin.git</connection>
+        <developerConnection>scm:git:git@github.com:jenkinsci/workplace-plugin.git</developerConnection>
+        <url>https://github.com/jenkinsci/workplace-plugin</url>
       <tag>HEAD</tag>
   	</scm>
 	
