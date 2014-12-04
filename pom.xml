@@ -9,7 +9,7 @@
 
 	<groupId>jenkins.plugins.elanceodesk</groupId>
 	<artifactId>workplace-notifier</artifactId>
-	<version>1.12-SNAPSHOT</version>
+	<version>1.13-SNAPSHOT</version>
 	<packaging>hpi</packaging>
 
 	<properties>
