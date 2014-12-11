@@ -13,15 +13,10 @@
  */
 package jenkins.plugins.elanceodesk.workplace.notifier.model;
 
-import static jenkins.plugins.elanceodesk.workplace.notifier.Utils.verifyNotEmpty;
-import hudson.model.Job;
-import hudson.model.Run;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jenkins.model.Jenkins;
 import jenkins.plugins.elanceodesk.workplace.notifier.Phase;
 
 @SuppressWarnings("rawtypes")
@@ -49,17 +44,25 @@ public class BuildState {
 
     private String durationString;
     
-    /**
-     *  Map of artifacts: file name => Map of artifact locations ( location name => artifact URL )
-     *  ---
-     *  artifacts:
-     *   notification.hpi:
-     *     s3: https://s3-eu-west-1.amazonaws.com/evgenyg-bakery-artifacts/jobs/notification-plugin/78/notification.hpi
-     *     archive: http://localhost:8080/job/notification-plugin/78/artifact/target/notification.hpi
-     *   notification.jar:
-     *     archive: http://localhost:8080/job/notification-plugin/78/artifact/target/notification.jar
-     */
-    private final Map<String, Map<String, String>> artifacts = new HashMap<String, Map<String, String>>();
+    private long completionTime;
+    
+    private BuildState failingSinceBuild;
+    
+    private String failingSinceTime;
+    
+    private String backToNormalTime;
+    
+//    /**
+//     *  Map of artifacts: file name => Map of artifact locations ( location name => artifact URL )
+//     *  ---
+//     *  artifacts:
+//     *   notification.hpi:
+//     *     s3: https://s3-eu-west-1.amazonaws.com/evgenyg-bakery-artifacts/jobs/notification-plugin/78/notification.hpi
+//     *     archive: http://localhost:8080/job/notification-plugin/78/artifact/target/notification.hpi
+//     *   notification.jar:
+//     *     archive: http://localhost:8080/job/notification-plugin/78/artifact/target/notification.jar
+//     */
+//    private final Map<String, Map<String, String>> artifacts = new HashMap<String, Map<String, String>>();
 
     public int getNumber() {
         return number;
@@ -109,9 +112,9 @@ public class BuildState {
         this.parameters = new HashMap<String, String>( params );
     }
 
-    public Map<String, Map<String, String>> getArtifacts () {
-        return artifacts;
-    }
+//    public Map<String, Map<String, String>> getArtifacts () {
+//        return artifacts;
+//    }
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
@@ -132,52 +135,53 @@ public class BuildState {
     }
 
 
-    /**
-     * Updates artifacts Map with S3 links, if corresponding publisher is available.
-     */
-    public void updateArtifacts ( Job job, Run run )
-    {
-        updateArchivedArtifacts( run );
-    }
+	// /**
+	// * Updates artifacts Map with S3 links, if corresponding publisher is
+	// available.
+	// */
+	// public void updateArtifacts ( Job job, Run run )
+	// {
+	// updateArchivedArtifacts( run );
+	// }
 
 
     
-	private void updateArchivedArtifacts ( Run run )
-    {
-        @SuppressWarnings( "unchecked" )
-        List<Run.Artifact> buildArtifacts = run.getArtifacts();
-
-        if ( buildArtifacts == null ) { return; }
-
-        for ( Run.Artifact a : buildArtifacts ) {
-            String artifactUrl = Jenkins.getInstance().getRootUrl() + run.getUrl() + "artifact/" + a.getHref();
-            updateArtifact( a.getFileName(), "archive", artifactUrl );
-        }
-    }
-
-    /**
-     * Updates an artifact URL.
-     *
-     * @param fileName     artifact file name
-     * @param locationName artifact location name, like "s3" or "archive"
-     * @param locationUrl  artifact URL at the location specified
-     */
-    private void updateArtifact( String fileName, String locationName, String locationUrl )
-    {
-        verifyNotEmpty( fileName, locationName, locationUrl );
-
-        if ( ! artifacts.containsKey( fileName )) {
-            artifacts.put( fileName, new HashMap<String, String>());
-        }
-
-        if ( artifacts.get( fileName ).containsKey( locationName )) {
-            throw new RuntimeException( String.format(
-                "Adding artifacts mapping '%s/%s/%s' - artifacts Map already contains mapping of location '%s': %s",
-                fileName, locationName, locationUrl, locationName, artifacts ));
-        }
-
-        artifacts.get( fileName ).put( locationName, locationUrl );
-    }
+//	private void updateArchivedArtifacts ( Run run )
+//    {
+//        @SuppressWarnings( "unchecked" )
+//        List<Run.Artifact> buildArtifacts = run.getArtifacts();
+//
+//        if ( buildArtifacts == null ) { return; }
+//
+//        for ( Run.Artifact a : buildArtifacts ) {
+//            String artifactUrl = Jenkins.getInstance().getRootUrl() + run.getUrl() + "artifact/" + a.getHref();
+//            updateArtifact( a.getFileName(), "archive", artifactUrl );
+//        }
+//    }
+//
+//    /**
+//     * Updates an artifact URL.
+//     *
+//     * @param fileName     artifact file name
+//     * @param locationName artifact location name, like "s3" or "archive"
+//     * @param locationUrl  artifact URL at the location specified
+//     */
+//    private void updateArtifact( String fileName, String locationName, String locationUrl )
+//    {
+//        verifyNotEmpty( fileName, locationName, locationUrl );
+//
+//        if ( ! artifacts.containsKey( fileName )) {
+//            artifacts.put( fileName, new HashMap<String, String>());
+//        }
+//
+//        if ( artifacts.get( fileName ).containsKey( locationName )) {
+//            throw new RuntimeException( String.format(
+//                "Adding artifacts mapping '%s/%s/%s' - artifacts Map already contains mapping of location '%s': %s",
+//                fileName, locationName, locationUrl, locationName, artifacts ));
+//        }
+//
+//        artifacts.get( fileName ).put( locationName, locationUrl );
+//    }
     
     public List<Changeset> getChangeSet() {
 		return changeSet;
@@ -201,5 +205,37 @@ public class BuildState {
 
 	public void setDurationString(String durationString) {
 		this.durationString = durationString;
+	}
+
+	public BuildState getFailingSinceBuild() {
+		return failingSinceBuild;
+	}
+
+	public void setFailingSinceBuild(BuildState failingSinceBuild) {
+		this.failingSinceBuild = failingSinceBuild;
+	}
+
+	public long getCompletionTime() {
+		return completionTime;
+	}
+
+	public void setCompletionTime(long completionTime) {
+		this.completionTime = completionTime;
+	}
+
+	public String getFailingSinceTime() {
+		return failingSinceTime;
+	}
+
+	public void setFailingSinceTime(String failingSinceTime) {
+		this.failingSinceTime = failingSinceTime;
+	}
+
+	public String getBackToNormalTime() {
+		return backToNormalTime;
+	}
+
+	public void setBackToNormalTime(String backToNormalTime) {
+		this.backToNormalTime = backToNormalTime;
 	}
 }

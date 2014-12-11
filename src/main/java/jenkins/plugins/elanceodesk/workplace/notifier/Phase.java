@@ -14,6 +14,7 @@
 package jenkins.plugins.elanceodesk.workplace.notifier;
 
 import hudson.EnvVars;
+import hudson.Util;
 import hudson.model.Cause;
 import hudson.model.ParameterValue;
 import hudson.model.Result;
@@ -120,16 +121,7 @@ public enum Phase {
 		EnvVars environment = run.getEnvironment(listener);
 		Result result = run.getResult();
 		String status = null;
-		if (result != null) {
-			status = result.toString();
-			Run previousBuild = run.getPreviousBuild();
-			Result previousResult = (previousBuild != null) ? previousBuild.getResult() : Result.SUCCESS;
-			if (result == Result.SUCCESS && previousResult == Result.FAILURE) {
-				status = "BACK_TO_NORMAL";
-			}
-			buildState.setStatus(status);
-		}
-
+		long currentBuildCompletionTime = run.getStartTimeInMillis() + run.getDuration();
 		List<Cause> causes = run.getCauses();
 		if (causes != null) {
 			List<String> causesStrList = new ArrayList<String>();
@@ -139,7 +131,34 @@ public enum Phase {
 			buildState.setCauses(causesStrList);
 		}
 
+		buildState.setCompletionTime(currentBuildCompletionTime);
+
 		if (this.equals(COMPLETED)) {
+			if (result != null) {
+				status = result.toString();
+				Run previousBuild = run.getPreviousBuild();
+				Result previousResult = (previousBuild != null) ? previousBuild.getResult() : Result.SUCCESS;
+				AbstractBuild failingSinceRun = (AbstractBuild) (run.getPreviousNotFailedBuild().getNextBuild());
+				if (result == Result.SUCCESS && previousResult == Result.FAILURE) {
+					status = "BACK_TO_NORMAL";
+					buildState.setBackToNormalTime(Util.getTimeSpanString(currentBuildCompletionTime
+							- failingSinceRun.getStartTimeInMillis()));
+				}
+				if (result == Result.FAILURE) {
+
+					BuildState failingSinceBuildState = new BuildState();
+					populateChangeSet(failingSinceRun, failingSinceBuildState, listener);
+					failingSinceBuildState.setNumber(failingSinceRun.number);
+					failingSinceBuildState.setFullUrl(rootUrl + failingSinceRun.getUrl());
+					long failingSinceBuildCompletionTime = failingSinceRun.getStartTimeInMillis()
+							+ failingSinceRun.getDuration();
+					failingSinceBuildState.setCompletionTime(failingSinceBuildCompletionTime);
+					failingSinceBuildState.setFailingSinceTime(Util.getTimeSpanString(currentBuildCompletionTime
+							- failingSinceRun.getStartTimeInMillis()));
+					buildState.setFailingSinceBuild(failingSinceBuildState);
+				}
+				buildState.setStatus(status);
+			}
 			buildState.setDurationString(run.getDurationString());
 		}
 
@@ -156,7 +175,7 @@ public enum Phase {
 			buildState.setFullUrl(rootUrl + run.getUrl());
 		}
 
-		buildState.updateArtifacts(job, run);
+		// buildState.updateArtifacts(job, run);
 
 		if (paramsAction != null) {
 			EnvVars env = new EnvVars();
@@ -181,18 +200,23 @@ public enum Phase {
 		}
 
 		if (this.equals(STARTED)) {
-			ChangeLogSet changeLogSet = run.getChangeSet();
-			List<Changeset> changesets = new ArrayList<Changeset>();
-			for (Object o : changeLogSet.getItems()) {
-
-				Entry entry = (Entry) o;
-				listener.getLogger().println("Entry " + o);
-				Changeset changeset = new Changeset(entry.getAuthor().getDisplayName(), entry.getAuthor().getId(),
-						entry.getAffectedFiles());
-				changesets.add(changeset);
-			}
-			buildState.setChangeSet(changesets);
+			populateChangeSet(run, buildState, listener);
 		}
+
 		return jobState;
+	}
+
+	private void populateChangeSet(AbstractBuild run, BuildState buildState, TaskListener listener) {
+		ChangeLogSet changeLogSet = run.getChangeSet();
+		List<Changeset> changesets = new ArrayList<Changeset>();
+		for (Object o : changeLogSet.getItems()) {
+
+			Entry entry = (Entry) o;
+			listener.getLogger().println("Entry " + o);
+			Changeset changeset = new Changeset(entry.getAuthor().getDisplayName(), entry.getAuthor().getId(),
+					entry.getAffectedFiles());
+			changesets.add(changeset);
+		}
+		buildState.setChangeSet(changesets);
 	}
 }
