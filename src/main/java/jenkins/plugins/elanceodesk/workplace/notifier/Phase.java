@@ -58,19 +58,30 @@ public enum Phase {
 			return;
 		}
 
-		for (Webhook target : property.getWebhooks()) {
-			if (isRun(target, build)) {
-				listener.getLogger().println(String.format("Notifying webhook '%s'", target));
-				try {
-					JobState jobState = buildJobState(build.getParent(), build, listener);
-					HttpWorker worker = new HttpWorker(target.getUrl(), gson.toJson(jobState), target.getTimeout(), 3,
-							listener.getLogger());
-					executorService.submit(worker);
-				} catch (Throwable error) {
-					error.printStackTrace(listener.error(String.format("Failed to notify webhook '%s'", target)));
-					listener.getLogger().println(
-							String.format("Failed to notify webhook '%s' - %s: %s", target, error.getClass().getName(),
-									error.getMessage()));
+		JobState jobState = null;
+		try {
+			jobState = buildJobState(build.getParent(), build, listener);
+		} catch (Throwable e) {
+			e.printStackTrace(listener.error(String.format("Unable to build the json object")));
+			listener.getLogger().println(
+					String.format("Unable to build the json object - %s: %s", e.getClass().getName(),
+							e.getMessage()));
+		}
+		if(jobState != null) {
+			for (Webhook target : property.getWebhooks()) {
+				if (isRun(target, build)) {
+					listener.getLogger().println(String.format("Notifying webhook '%s'", target));
+					try {
+						
+						HttpWorker worker = new HttpWorker(target.getUrl(), gson.toJson(jobState), target.getTimeout(), 3,
+								listener.getLogger());
+						executorService.submit(worker);
+					} catch (Throwable error) {
+						error.printStackTrace(listener.error(String.format("Failed to notify webhook '%s'", target)));
+						listener.getLogger().println(
+								String.format("Failed to notify webhook '%s' - %s: %s", target, error.getClass().getName(),
+										error.getMessage()));
+					}
 				}
 			}
 		}
@@ -138,13 +149,19 @@ public enum Phase {
 				status = result.toString();
 				Run previousBuild = run.getPreviousBuild();
 				Result previousResult = (previousBuild != null) ? previousBuild.getResult() : Result.SUCCESS;
-				AbstractBuild failingSinceRun = (AbstractBuild) (run.getPreviousNotFailedBuild().getNextBuild());
+				
+				AbstractBuild failingSinceRun = null;
+				if(run.getPreviousNotFailedBuild() != null) {
+					failingSinceRun = (AbstractBuild) (run.getPreviousNotFailedBuild().getNextBuild());
+				} else {
+					failingSinceRun = run.getProject().getFirstBuild();
+				}
 				if (result == Result.SUCCESS && previousResult == Result.FAILURE) {
 					status = "BACK_TO_NORMAL";
 					buildState.setBackToNormalTime(Util.getTimeSpanString(currentBuildCompletionTime
 							- failingSinceRun.getStartTimeInMillis()));
 				}
-				if (result == Result.FAILURE) {
+				if (result == Result.FAILURE && failingSinceRun != null) {
 
 					BuildState failingSinceBuildState = new BuildState();
 					populateChangeSet(failingSinceRun, failingSinceBuildState, listener);
