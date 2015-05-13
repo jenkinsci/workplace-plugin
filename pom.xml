@@ -9,7 +9,7 @@
 
 	<groupId>jenkins.plugins.elanceodesk</groupId>
 	<artifactId>workplace-notifier</artifactId>
-	<version>1.15</version>
+	<version>1.16-SNAPSHOT</version>
 	<packaging>hpi</packaging>
 
 	<properties>
@@ -74,7 +74,7 @@
 		<connection>scm:git:ssh://github.com/jenkinsci/workplace-plugin.git</connection>
 		<developerConnection>scm:git:ssh://git@github.com/jenkinsci/workplace-plugin.git</developerConnection>
 		<url>https://github.com/jenkinsci/workplace-plugin.git</url>
-	  <tag>workplace-notifier-1.15</tag>
+	  <tag>HEAD</tag>
   </scm>
 
 
