@@ -156,7 +156,7 @@ public enum Phase {
 				} else {
 					failingSinceRun = run.getProject().getFirstBuild();
 				}
-				if (result == Result.SUCCESS && previousResult == Result.FAILURE) {
+				if (result == Result.SUCCESS && (previousResult == Result.FAILURE || previousResult == Result.UNSTABLE)) {
 					status = "BACK_TO_NORMAL";
 					buildState.setBackToNormalTime(Util.getTimeSpanString(currentBuildCompletionTime
 							- failingSinceRun.getStartTimeInMillis()));
